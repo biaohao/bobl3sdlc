@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CompanyConfig } from '@/constants/companies';
+import { DEFAULT_COMPANIES, type CompanyConfig } from '@/constants/companies';
 import type { TimeWindow } from '@/constants/timeWindows';
 
 interface FinanceState {
@@ -32,7 +32,7 @@ const isValidSymbol = (symbol: string): boolean => /^[A-Z]{1,5}$/.test(symbol);
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set) => ({
-      companies: [],
+      companies: DEFAULT_COMPANIES,
       activeTimeWindow: 'day',
       customSymbols: [],
       error: null,

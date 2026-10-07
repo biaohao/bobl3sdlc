@@ -6,6 +6,14 @@ import { useFinanceStore } from '@/store';
 
 // Mock hooks with factory functions defined inside vi.mock (hoisted)
 vi.mock('@/hooks', () => {
+  const mockUseQuotes = vi.fn(() => ({
+    data: { ok: true, data: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }));
+
   const mockUseDefaultQuotes = vi.fn(() => ({
     data: { ok: true, data: [] },
     isLoading: false,
@@ -47,6 +55,7 @@ vi.mock('@/hooks', () => {
   }));
 
   return {
+    useQuotes: mockUseQuotes,
     useDefaultQuotes: mockUseDefaultQuotes,
     useDefaultHistory: mockUseDefaultHistory,
     useAlignedHistory: mockUseAlignedHistory,
@@ -56,7 +65,7 @@ vi.mock('@/hooks', () => {
 });
 
 // Import the mock functions (they are vi.fn() from the factory above)
-import { useDefaultQuotes, useDefaultHistory, useAlignedHistory, useCustomCompanyQuote, useCustomCompanyHistory } from '@/hooks';
+import { useQuotes, useDefaultQuotes, useDefaultHistory, useAlignedHistory, useCustomCompanyQuote, useCustomCompanyHistory } from '@/hooks';
 
 vi.mock('@/store', async () => {
   const actual = await vi.importActual('@/store');
@@ -156,7 +165,7 @@ describe('Dashboard components', () => {
 
   describe('CurrentDayView', () => {
     it('renders summary cards for all companies', () => {
-      useDefaultQuotes.mockImplementation(() => ({
+      useQuotes.mockImplementation(() => ({
         data: { ok: true, data: mockQuoteData },
         isLoading: false,
         isError: false,
@@ -172,8 +181,25 @@ describe('Dashboard components', () => {
       expect(screen.getByText('CRM')).toBeInTheDocument();
     });
 
+    it('renders custom added companies as well', () => {
+      const customQuoteData = [
+        ...mockQuoteData,
+        { symbol: 'AAPL', regularMarketPrice: 180.5, regularMarketChange: 2.0, regularMarketChangePercent: 1.12, regularMarketTime: Date.now(), longName: 'Apple Inc.', shortName: 'AAPL', currency: 'USD', marketState: 'REGULAR' },
+      ];
+      useQuotes.mockImplementation(() => ({
+        data: { ok: true, data: customQuoteData },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      render(<CurrentDayView />, { wrapper: createWrapper() });
+      expect(screen.getByText('AAPL')).toBeInTheDocument();
+    });
+
     it('shows loading state initially', () => {
-      useDefaultQuotes.mockImplementation(() => ({
+      useQuotes.mockImplementation(() => ({
         data: undefined,
         isLoading: true,
         isError: false,
@@ -186,7 +212,7 @@ describe('Dashboard components', () => {
     });
 
     it('shows error state with retry button', () => {
-      useDefaultQuotes.mockImplementation(() => ({
+      useQuotes.mockImplementation(() => ({
         data: undefined,
         isLoading: false,
         isError: true,

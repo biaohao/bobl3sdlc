@@ -1,10 +1,19 @@
-import { useDefaultQuotes } from '@/hooks';
+import { useFinanceStore } from '@/store';
+import { useQuotes } from '@/hooks';
 import { ChartCard, SummaryCard } from '../charts';
 import { DEFAULT_COMPANIES } from '@/constants/companies';
 import type { Quote } from '@/services/finance/types';
 
 export function CurrentDayView() {
-  const { data: quotesResult, isLoading, isError, error, refetch } = useDefaultQuotes();
+  const companies = useFinanceStore((state) => state.companies);
+  const customSymbols = useFinanceStore((state) => state.customSymbols);
+
+  const allSymbols = [
+    ...DEFAULT_COMPANIES.map((c) => c.symbol),
+    ...customSymbols.filter((s) => !DEFAULT_COMPANIES.some((c) => c.symbol === s)),
+  ];
+
+  const { data: quotesResult, isLoading, isError, error, refetch } = useQuotes(allSymbols);
 
   const quotes: Quote[] = quotesResult?.ok ? quotesResult.data : [];
 
@@ -62,12 +71,12 @@ export function CurrentDayView() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {competitorQuotes.map((quote) => {
-          const company = DEFAULT_COMPANIES.find((c) => c.symbol === quote.symbol);
+          const company = companies.find((c) => c.symbol === quote.symbol) || DEFAULT_COMPANIES.find((c) => c.symbol === quote.symbol);
           return (
             <SummaryCard
               key={quote.symbol}
               symbol={quote.symbol}
-              name={quote.longName}
+              name={quote.longName || quote.symbol}
               price={quote.regularMarketPrice}
               change={quote.regularMarketChange}
               changePercent={quote.regularMarketChangePercent}
