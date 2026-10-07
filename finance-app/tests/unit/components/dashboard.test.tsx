@@ -1,11 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { CurrentDayView, SevenDayView, QuarterView, DashboardLayout, CompanySelector } from '@/components/dashboard';
+import { CurrentDayView, SevenDayView, QuarterView, DashboardLayout, CompanySelector, CustomCompanyView } from '@/components/dashboard';
 import { useFinanceStore } from '@/store';
 
 // Mock hooks with factory functions defined inside vi.mock (hoisted)
 vi.mock('@/hooks', () => {
+  const mockUseQuotes = vi.fn(() => ({
+    data: { ok: true, data: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }));
+
   const mockUseDefaultQuotes = vi.fn(() => ({
     data: { ok: true, data: [] },
     isLoading: false,
@@ -30,15 +38,48 @@ vi.mock('@/hooks', () => {
     refetch: vi.fn(),
   }));
 
+  const mockUseCustomCompanyQuote = vi.fn(() => ({
+    data: { ok: true, data: null },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }));
+
+  const mockUseCustomCompanyHistory = vi.fn(() => ({
+    data: { ok: true, data: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }));
+
+  const mockUseMultipleHistories = vi.fn((symbols: string[]) =>
+    symbols.map((sym) => ({
+      data: {
+        ok: true,
+        data: [{ date: '2024-01-01', close: 150, high: 152, low: 148, open: 149, volume: 1000000, adjustedClose: 150 }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    }))
+  );
+
   return {
+    useQuotes: mockUseQuotes,
     useDefaultQuotes: mockUseDefaultQuotes,
     useDefaultHistory: mockUseDefaultHistory,
     useAlignedHistory: mockUseAlignedHistory,
+    useMultipleHistories: mockUseMultipleHistories,
+    useCustomCompanyQuote: mockUseCustomCompanyQuote,
+    useCustomCompanyHistory: mockUseCustomCompanyHistory,
   };
 });
 
 // Import the mock functions (they are vi.fn() from the factory above)
-import { useDefaultQuotes, useDefaultHistory, useAlignedHistory } from '@/hooks';
+import { useQuotes, useDefaultQuotes, useDefaultHistory, useAlignedHistory, useMultipleHistories, useCustomCompanyQuote, useCustomCompanyHistory } from '@/hooks';
 
 vi.mock('@/store', async () => {
   const actual = await vi.importActual('@/store');
@@ -93,6 +134,14 @@ const defaultStoreState = {
   removeCustomCompany: vi.fn(),
   setError: vi.fn(),
   clearCustomCompanies: vi.fn(),
+  // Custom company state
+  customCompanySymbol: null,
+  customCompanyLoading: false,
+  customCompanyError: null,
+  setCustomCompany: vi.fn(),
+  setCustomCompanyLoading: vi.fn(),
+  setCustomCompanyError: vi.fn(),
+  clearCustomCompany: vi.fn(),
 };
 
 describe('Dashboard components', () => {
@@ -130,7 +179,7 @@ describe('Dashboard components', () => {
 
   describe('CurrentDayView', () => {
     it('renders summary cards for all companies', () => {
-      useDefaultQuotes.mockImplementation(() => ({
+      useQuotes.mockImplementation(() => ({
         data: { ok: true, data: mockQuoteData },
         isLoading: false,
         isError: false,
@@ -146,8 +195,25 @@ describe('Dashboard components', () => {
       expect(screen.getByText('CRM')).toBeInTheDocument();
     });
 
+    it('renders custom added companies as well', () => {
+      const customQuoteData = [
+        ...mockQuoteData,
+        { symbol: 'AAPL', regularMarketPrice: 180.5, regularMarketChange: 2.0, regularMarketChangePercent: 1.12, regularMarketTime: Date.now(), longName: 'Apple Inc.', shortName: 'AAPL', currency: 'USD', marketState: 'REGULAR' },
+      ];
+      useQuotes.mockImplementation(() => ({
+        data: { ok: true, data: customQuoteData },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      render(<CurrentDayView />, { wrapper: createWrapper() });
+      expect(screen.getByText('AAPL')).toBeInTheDocument();
+    });
+
     it('shows loading state initially', () => {
-      useDefaultQuotes.mockImplementation(() => ({
+      useQuotes.mockImplementation(() => ({
         data: undefined,
         isLoading: true,
         isError: false,
@@ -160,7 +226,7 @@ describe('Dashboard components', () => {
     });
 
     it('shows error state with retry button', () => {
-      useDefaultQuotes.mockImplementation(() => ({
+      useQuotes.mockImplementation(() => ({
         data: undefined,
         isLoading: false,
         isError: true,
@@ -176,13 +242,15 @@ describe('Dashboard components', () => {
 
   describe('SevenDayView', () => {
     it('renders line charts when 7d window is active', () => {
-      useDefaultHistory.mockImplementation(() => ({
-        data: { ok: true, data: mockHistoryData },
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      }));
+      useMultipleHistories.mockImplementation((symbols: string[]) =>
+        symbols.map(() => ({
+          data: { ok: true, data: [{ date: '2024-01-01', close: 150, high: 152, low: 148, open: 149, volume: 1000000, adjustedClose: 150 }] },
+          isLoading: false,
+          isError: false,
+          error: null,
+          refetch: vi.fn(),
+        }))
+      );
 
       vi.mocked(useFinanceStore).mockImplementation((selector) => {
         const state = {
@@ -213,13 +281,15 @@ describe('Dashboard components', () => {
 
   describe('QuarterView', () => {
     it('renders area chart when quarter window is active', () => {
-      useAlignedHistory.mockImplementation(() => ({
-        data: { ok: true, data: mockAlignedData },
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      }));
+      useMultipleHistories.mockImplementation((symbols: string[]) =>
+        symbols.map(() => ({
+          data: { ok: true, data: [{ date: '2024-01-01', close: 150, high: 152, low: 148, open: 149, volume: 1000000, adjustedClose: 150 }] },
+          isLoading: false,
+          isError: false,
+          error: null,
+          refetch: vi.fn(),
+        }))
+      );
 
       vi.mocked(useFinanceStore).mockImplementation((selector) => {
         const state = {
@@ -313,6 +383,136 @@ describe('Dashboard components', () => {
       render(<CompanySelector />, { wrapper: createWrapper() });
 
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('CustomCompanyView', () => {
+    const mockStoreState = (overrides = {}) => ({
+      ...defaultStoreState,
+      customCompanySymbol: null,
+      customCompanyLoading: false,
+      customCompanyError: null,
+      setCustomCompany: vi.fn(),
+      setCustomCompanyLoading: vi.fn(),
+      setCustomCompanyError: vi.fn(),
+      clearCustomCompany: vi.fn(),
+      ...overrides,
+    });
+
+    const createStoreMock = (state = mockStoreState()) =>
+      vi.fn((selector?: (state: typeof state) => unknown) =>
+        selector ? selector(state) : state
+      );
+
+    beforeEach(() => {
+      // Reset custom company hooks
+      useCustomCompanyQuote.mockImplementation(() => ({
+        data: { ok: true, data: null },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      useCustomCompanyHistory.mockImplementation(() => ({
+        data: { ok: true, data: [] },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      // Default store mock - handle both selector and no-selector calls
+      vi.mocked(useFinanceStore).mockImplementation(createStoreMock());
+    });
+
+    it('returns null when no custom company symbol', () => {
+      vi.mocked(useFinanceStore).mockImplementation(createStoreMock(mockStoreState({ customCompanySymbol: null })));
+
+      const { container } = render(<CustomCompanyView />, { wrapper: createWrapper() });
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('shows loading state when custom company is set', () => {
+      vi.mocked(useFinanceStore).mockImplementation(createStoreMock(mockStoreState({ customCompanySymbol: 'AAPL', customCompanyLoading: true })));
+
+      render(<CustomCompanyView />, { wrapper: createWrapper() });
+      expect(screen.getByText('Custom Company: AAPL')).toBeInTheDocument();
+      expect(screen.getByText('Loading chart...')).toBeInTheDocument();
+    });
+
+    it('shows error state when custom company has error', () => {
+      vi.mocked(useFinanceStore).mockImplementation(createStoreMock(mockStoreState({ customCompanySymbol: 'AAPL', customCompanyLoading: false, customCompanyError: 'Failed to load data', clearCustomCompany: vi.fn() })));
+
+      render(<CustomCompanyView />, { wrapper: createWrapper() });
+      expect(screen.getByText('Custom Company: AAPL')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load data')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
+    it('shows chart when data is available', () => {
+      const mockHistory = [
+        { date: '2024-01-01', close: 150, high: 152, low: 148, open: 149, volume: 1000000, adjustedClose: 150 },
+        { date: '2024-01-02', close: 151, high: 153, low: 149, open: 150, volume: 1100000, adjustedClose: 151 },
+      ];
+      const mockQuote = {
+        symbol: 'AAPL',
+        regularMarketPrice: 180.5,
+        regularMarketChange: 1.5,
+        regularMarketChangePercent: 0.84,
+        regularMarketTime: Date.now(),
+        longName: 'Apple Inc.',
+        shortName: 'AAPL',
+        currency: 'USD',
+        marketState: 'REGULAR',
+      };
+
+      useCustomCompanyHistory.mockImplementation(() => ({
+        data: { ok: true, data: mockHistory },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      useCustomCompanyQuote.mockImplementation(() => ({
+        data: { ok: true, data: mockQuote },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      vi.mocked(useFinanceStore).mockImplementation(createStoreMock(mockStoreState({ customCompanySymbol: 'AAPL', customCompanyLoading: false, customCompanyError: null })));
+
+      render(<CustomCompanyView />, { wrapper: createWrapper() });
+      expect(screen.getByText('Custom Company: AAPL')).toBeInTheDocument();
+      expect(screen.getByText('Current Quote')).toBeInTheDocument();
+      expect(screen.getByText(/\$180\.50/)).toBeInTheDocument();
+    });
+
+    it('shows no data message when history is empty', () => {
+      useCustomCompanyHistory.mockImplementation(() => ({
+        data: { ok: true, data: [] },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      useCustomCompanyQuote.mockImplementation(() => ({
+        data: { ok: true, data: null },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      }));
+
+      vi.mocked(useFinanceStore).mockImplementation(createStoreMock(mockStoreState({ customCompanySymbol: 'AAPL', customCompanyLoading: false, customCompanyError: null })));
+
+      render(<CustomCompanyView />, { wrapper: createWrapper() });
+      expect(screen.getByText('Custom Company: AAPL')).toBeInTheDocument();
+      expect(screen.getByText('No historical data available')).toBeInTheDocument();
     });
   });
 });

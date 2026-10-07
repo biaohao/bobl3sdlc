@@ -154,4 +154,90 @@ describe('financeStore (Zustand)', () => {
       expect(state.customSymbols).toEqual([]);
     });
   });
+
+  describe('custom company actions', () => {
+    beforeEach(() => {
+      // Reset custom company state
+      useFinanceStore.setState({
+        customCompanySymbol: null,
+        customCompanyLoading: false,
+        customCompanyError: null,
+      });
+    });
+
+    describe('setCustomCompany', () => {
+      it('sets valid custom company symbol', () => {
+        useFinanceStore.getState().setCustomCompany('AAPL');
+        const state = useFinanceStore.getState();
+        expect(state.customCompanySymbol).toBe('AAPL');
+        expect(state.customCompanyLoading).toBe(true);
+        expect(state.customCompanyError).toBeNull();
+      });
+
+      it('normalizes symbol to uppercase', () => {
+        useFinanceStore.getState().setCustomCompany('aapl');
+        expect(useFinanceStore.getState().customCompanySymbol).toBe('AAPL');
+      });
+
+      it('rejects invalid symbol format', () => {
+        useFinanceStore.getState().setCustomCompany('invalid!');
+        const state = useFinanceStore.getState();
+        expect(state.customCompanySymbol).toBeNull();
+        expect(state.customCompanyError).toBe('Invalid symbol: invalid!. Use 1-5 uppercase letters.');
+        expect(state.customCompanyLoading).toBe(false);
+      });
+
+      it('clears custom company when null is passed', () => {
+        useFinanceStore.getState().setCustomCompany('AAPL');
+        expect(useFinanceStore.getState().customCompanySymbol).toBe('AAPL');
+
+        useFinanceStore.getState().setCustomCompany(null);
+        const state = useFinanceStore.getState();
+        expect(state.customCompanySymbol).toBeNull();
+        expect(state.customCompanyError).toBeNull();
+        expect(state.customCompanyLoading).toBe(false);
+      });
+    });
+
+    describe('setCustomCompanyLoading', () => {
+      it('sets loading state', () => {
+        useFinanceStore.getState().setCustomCompanyLoading(true);
+        expect(useFinanceStore.getState().customCompanyLoading).toBe(true);
+
+        useFinanceStore.getState().setCustomCompanyLoading(false);
+        expect(useFinanceStore.getState().customCompanyLoading).toBe(false);
+      });
+    });
+
+    describe('setCustomCompanyError', () => {
+      it('sets error and clears loading', () => {
+        useFinanceStore.getState().setCustomCompanyLoading(true);
+        useFinanceStore.getState().setCustomCompanyError('Test error');
+        const state = useFinanceStore.getState();
+        expect(state.customCompanyError).toBe('Test error');
+        expect(state.customCompanyLoading).toBe(false);
+      });
+
+      it('clears error when null is passed', () => {
+        useFinanceStore.getState().setCustomCompanyError('Test error');
+        useFinanceStore.getState().setCustomCompanyError(null);
+        expect(useFinanceStore.getState().customCompanyError).toBeNull();
+      });
+    });
+
+    describe('clearCustomCompany', () => {
+      it('resets all custom company state', () => {
+        useFinanceStore.getState().setCustomCompany('AAPL');
+        useFinanceStore.getState().setCustomCompanyError('Test error');
+        useFinanceStore.getState().setCustomCompanyLoading(true);
+
+        useFinanceStore.getState().clearCustomCompany();
+
+        const state = useFinanceStore.getState();
+        expect(state.customCompanySymbol).toBeNull();
+        expect(state.customCompanyError).toBeNull();
+        expect(state.customCompanyLoading).toBe(false);
+      });
+    });
+  });
 });

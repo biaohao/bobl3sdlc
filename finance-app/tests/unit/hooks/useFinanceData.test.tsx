@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useQuote, useQuotes, useHistory, useDefaultHistory, useAlignedHistory, useDefaultQuotes } from '@/hooks/useFinanceData';
+import { useQuote, useQuotes, useHistory, useDefaultHistory, useAlignedHistory, useDefaultQuotes, useCustomCompanyQuote, useCustomCompanyHistory } from '@/hooks/useFinanceData';
 import { getQuote, getHistory, getQuotes, getDefaultHistory, getAlignedHistory } from '@/services/finance';
 
 vi.mock('@/services/finance', async () => {
@@ -174,6 +174,54 @@ describe('useFinanceData hooks', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data?.ok).toBe(true);
       expect(result.current.data?.data).toHaveLength(2);
+    });
+  });
+
+  describe('useCustomCompanyQuote', () => {
+    it('returns quote data when enabled', async () => {
+      vi.mocked(getQuote).mockResolvedValue(mockQuote('AAPL', 180));
+
+      const { result } = renderHook(() => useCustomCompanyQuote('AAPL'), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.ok).toBe(true);
+      expect(result.current.data?.data.regularMarketPrice).toBe(180);
+    });
+
+    it('does not fetch when symbol is null', () => {
+      const { result } = renderHook(() => useCustomCompanyQuote(null), { wrapper: createWrapper() });
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.data).toBeUndefined();
+      expect(getQuote).not.toHaveBeenCalled();
+    });
+
+    it('returns error result on failure', async () => {
+      vi.mocked(getQuote).mockResolvedValue({ ok: false, error: { code: 'NETWORK', message: 'Failed' } });
+
+      const { result } = renderHook(() => useCustomCompanyQuote('INVALID'), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.ok).toBe(false);
+      expect(result.current.data?.error).toEqual({ code: 'NETWORK', message: 'Failed' });
+    });
+  });
+
+  describe('useCustomCompanyHistory', () => {
+    it('fetches history for symbol and window', async () => {
+      vi.mocked(getHistory).mockResolvedValue(mockHistory(7));
+
+      const { result } = renderHook(() => useCustomCompanyHistory('AAPL', '7d'), { wrapper: createWrapper() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.ok).toBe(true);
+      expect(result.current.data?.data).toHaveLength(7);
+      expect(getHistory).toHaveBeenCalledWith('AAPL', expect.any(Date), expect.any(Date));
+    });
+
+    it('does not fetch when symbol is null', () => {
+      const { result } = renderHook(() => useCustomCompanyHistory(null, '7d'), { wrapper: createWrapper() });
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(result.current.data).toBeUndefined();
     });
   });
 });

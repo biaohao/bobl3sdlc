@@ -4,6 +4,7 @@ import { TIME_WINDOWS, type TimeWindow } from '@/constants/timeWindows';
 import { Button } from '../common';
 import { Select } from '../common';
 import { CompanySelector } from './CompanySelector';
+import { CustomCompanyView } from './CustomCompanyView';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -14,6 +15,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const setTimeWindow = useFinanceStore((state) => state.setTimeWindow);
   const error = useFinanceStore((state) => state.error);
   const setError = useFinanceStore((state) => state.setError);
+  const customCompanySymbol = useFinanceStore((state) => state.customCompanySymbol);
+  const clearCustomCompany = useFinanceStore((state) => state.clearCustomCompany);
 
   const windowOptions = TIME_WINDOWS.map((w) => ({
     value: w.value,
@@ -56,6 +59,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
+        {customCompanySymbol && (
+          <div className="mt-8 pt-8 border-t border-[#e5e7eb]">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-[#1f2328]">Custom Company</h2>
+              <Button variant="ghost" size="sm" onClick={clearCustomCompany}>
+                Remove
+              </Button>
+            </div>
+            <CustomCompanyView />
+          </div>
+        )}
       </main>
 
       <footer className="bg-white border-t border-[#e5e7eb] mt-auto">

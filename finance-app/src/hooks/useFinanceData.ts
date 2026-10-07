@@ -86,7 +86,7 @@ function getDateRange(window: TimeWindow): { period1: Date; period2: Date } {
   switch (window) {
     case 'day':
       period1 = new Date(now);
-      period1.setHours(0, 0, 0, 0);
+      period1.setDate(now.getDate() - 1);
       break;
     case '7d':
       period1 = new Date(now);
@@ -108,6 +108,29 @@ export function useDefaultQuotes() {
   return useQuery({
     queryKey: ['defaultQuotes'],
     queryFn: () => getQuotes(['IBM', 'MSFT', 'ORCL', 'SAP', 'CRM']),
+    staleTime: QUERY_STALE_TIME,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+}
+
+export function useCustomCompanyQuote(symbol: string | null) {
+  return useQuery({
+    queryKey: ['customQuote', symbol],
+    queryFn: () => getQuote(symbol!),
+    enabled: !!symbol,
+    staleTime: QUERY_STALE_TIME,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+}
+
+export function useCustomCompanyHistory(symbol: string | null, window: TimeWindow) {
+  const { period1, period2 } = getDateRange(window);
+  return useQuery({
+    queryKey: ['customHistory', symbol, window],
+    queryFn: () => getHistory(symbol!, period1, period2),
+    enabled: !!symbol,
     staleTime: QUERY_STALE_TIME,
     refetchOnWindowFocus: false,
     retry: 1,

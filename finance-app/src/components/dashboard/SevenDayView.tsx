@@ -1,23 +1,33 @@
 import { useFinanceStore } from '@/store';
-import { useDefaultHistory } from '@/hooks';
+import { useMultipleHistories } from '@/hooks';
 import { ChartCard, LineChart } from '../charts';
-import { DEFAULT_COMPANIES } from '@/constants/companies';
+import { DEFAULT_COMPANIES, type CompanyConfig } from '@/constants/companies';
 import type { HistoryPoint } from '@/services/finance/types';
 
 export function SevenDayView() {
   const activeTimeWindow = useFinanceStore((state) => state.activeTimeWindow);
-  const { data: historyResult, isLoading, isError, error, refetch } = useDefaultHistory('7d');
+  const companies = useFinanceStore((state) => state.companies) || [];
+  const customSymbols = useFinanceStore((state) => state.customSymbols) || [];
+
+  const displayCompanies: CompanyConfig[] = [
+    ...DEFAULT_COMPANIES,
+    ...companies.filter((c) => customSymbols.includes(c.symbol) && !DEFAULT_COMPANIES.some((dc) => dc.symbol === c.symbol)),
+  ];
+
+  const symbols = displayCompanies.map((c) => c.symbol);
+  const historyQueries = useMultipleHistories(symbols, '7d');
 
   if (activeTimeWindow !== '7d') {
     return null;
   }
 
-  const historyMap = historyResult?.ok ? historyResult.data : new Map();
+  const isLoading = historyQueries.some((q) => q.isLoading);
+  const isError = historyQueries.every((q) => q.isError || (q.data && !q.data.ok));
 
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {DEFAULT_COMPANIES.map((company) => (
+        {displayCompanies.map((company) => (
           <ChartCard key={company.symbol} title={company.name} loading>
             <div className="h-64" />
           </ChartCard>
@@ -31,16 +41,17 @@ export function SevenDayView() {
       <ChartCard
         title="Last 7 Days Trend"
         subtitle="Weekly price comparison"
-        error={error?.message ?? 'Failed to load historical data'}
-        onRetry={() => refetch()}
+        error="Failed to load historical data"
+        onRetry={() => historyQueries.forEach((q) => q.refetch())}
       />
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {DEFAULT_COMPANIES.map((company) => {
-        const history = historyMap.get(company.symbol) as HistoryPoint[] | undefined;
+      {displayCompanies.map((company, index) => {
+        const query = historyQueries[index];
+        const history = (query?.data?.ok && query.data.data) as HistoryPoint[] | undefined;
         return (
           <ChartCard key={company.symbol} title={company.name} subtitle="7-day trend">
             {history && history.length > 0 ? (
