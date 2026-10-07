@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CompanyConfig } from '@/constants/companies';
+import { DEFAULT_COMPANIES, type CompanyConfig } from '@/constants/companies';
 import type { TimeWindow } from '@/constants/timeWindows';
 
 interface FinanceState {
@@ -32,7 +32,7 @@ const isValidSymbol = (symbol: string): boolean => /^[A-Z]{1,5}$/.test(symbol);
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set) => ({
-      companies: [],
+      companies: DEFAULT_COMPANIES,
       activeTimeWindow: 'day',
       customSymbols: [],
       error: null,
@@ -49,14 +49,12 @@ export const useFinanceStore = create<FinanceState>()(
           return;
         }
         set((state) => {
-          if (state.companies.some((c) => c.symbol === upperSymbol)) {
+          if (state.customSymbols.includes(upperSymbol) || DEFAULT_COMPANIES.some((c) => c.symbol === upperSymbol)) {
             return { error: `${upperSymbol} already added` };
           }
-          if (state.customSymbols.includes(upperSymbol)) {
-            return { error: `${upperSymbol} already added` };
-          }
+          const baseCompanies = state.companies.length > 0 ? state.companies : DEFAULT_COMPANIES;
           return {
-            companies: [...state.companies, config],
+            companies: [...baseCompanies.filter((c) => c.symbol !== upperSymbol), config],
             customSymbols: [...state.customSymbols, upperSymbol],
             error: null,
           };
@@ -102,6 +100,7 @@ export const useFinanceStore = create<FinanceState>()(
     {
       name: 'finance-store',
       partialize: (state) => ({
+        companies: state.companies,
         customSymbols: state.customSymbols,
         activeTimeWindow: state.activeTimeWindow,
       }),

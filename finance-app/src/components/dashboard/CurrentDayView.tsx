@@ -69,14 +69,14 @@ export function CurrentDayView() {
         </ChartCard>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {competitorQuotes.map((quote) => {
           const company = companies.find((c) => c.symbol === quote.symbol) || DEFAULT_COMPANIES.find((c) => c.symbol === quote.symbol);
           return (
             <SummaryCard
               key={quote.symbol}
               symbol={quote.symbol}
-              name={quote.longName || quote.symbol}
+              name={company?.name && company.name !== company.symbol ? company.name : quote.longName || quote.symbol}
               price={quote.regularMarketPrice}
               change={quote.regularMarketChange}
               changePercent={quote.regularMarketChangePercent}

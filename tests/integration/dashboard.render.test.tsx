@@ -5,6 +5,13 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { useFinanceStore } from '@/store';
 
 vi.mock('@/hooks', () => ({
+  useQuotes: () => ({
+    data: { ok: true, data: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
   useDefaultQuotes: () => ({
     data: { ok: true, data: [] },
     isLoading: false,
@@ -20,6 +27,20 @@ vi.mock('@/hooks', () => ({
     refetch: vi.fn(),
   }),
   useAlignedHistory: () => ({
+    data: { ok: true, data: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useCustomCompanyQuote: () => ({
+    data: { ok: true, data: null },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useCustomCompanyHistory: () => ({
     data: { ok: true, data: [] },
     isLoading: false,
     isError: false,

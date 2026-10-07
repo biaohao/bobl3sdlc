@@ -54,9 +54,12 @@ export function CompanySelector() {
       setError(`${upperSymbol} already added`);
       return;
     }
+    const foundTicker = COMMON_TICKERS.find((t) => t.value === upperSymbol);
+    const companyName = foundTicker ? foundTicker.label.split(' (')[0] : upperSymbol;
+
     addCustomCompany(upperSymbol, {
       symbol: upperSymbol,
-      name: upperSymbol,
+      name: companyName,
       color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
       isPrimary: false,
     });

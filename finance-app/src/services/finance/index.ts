@@ -25,7 +25,15 @@ async function fetchWithProxy<T>(endpoint: string, params: Record<string, string
 
 // Proxy-based implementations
 async function fetchQuoteViaProxy(symbol: string): Promise<Result<Quote>> {
-  return fetchWithProxy<Quote>('/api/quote', { symbols: symbol });
+  const result = await fetchWithProxy<Quote[]>('/api/quote', { symbols: symbol });
+  if (result.ok) {
+    const quote = result.data.find((q) => q.symbol === symbol) ?? result.data[0];
+    if (quote) {
+      return { ok: true, data: quote };
+    }
+    return { ok: false, error: { code: 'NOT_FOUND', message: `Quote not found for ${symbol}` } };
+  }
+  return result;
 }
 
 async function fetchHistoryViaProxy(symbol: string, period1: Date, period2: Date): Promise<Result<HistoryPoint[]>> {
