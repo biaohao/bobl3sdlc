@@ -5,8 +5,8 @@ import { DEFAULT_COMPANIES } from '@/constants/companies';
 import type { Quote } from '@/services/finance/types';
 
 export function CurrentDayView() {
-  const companies = useFinanceStore((state) => state.companies);
-  const customSymbols = useFinanceStore((state) => state.customSymbols);
+  const companies = useFinanceStore((state) => state.companies) || [];
+  const customSymbols = useFinanceStore((state) => state.customSymbols) || [];
 
   const allSymbols = [
     ...DEFAULT_COMPANIES.map((c) => c.symbol),

@@ -159,7 +159,7 @@ function getDateRangeForWindow(window: 'day' | '7d' | 'quarter'): {
   switch (window) {
     case 'day':
       period1 = new Date(now);
-      period1.setHours(0, 0, 0, 0);
+      period1.setDate(now.getDate() - 1);
       break;
     case '7d':
       period1 = new Date(now);

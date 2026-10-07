@@ -54,18 +54,32 @@ vi.mock('@/hooks', () => {
     refetch: vi.fn(),
   }));
 
+  const mockUseMultipleHistories = vi.fn((symbols: string[]) =>
+    symbols.map((sym) => ({
+      data: {
+        ok: true,
+        data: [{ date: '2024-01-01', close: 150, high: 152, low: 148, open: 149, volume: 1000000, adjustedClose: 150 }],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    }))
+  );
+
   return {
     useQuotes: mockUseQuotes,
     useDefaultQuotes: mockUseDefaultQuotes,
     useDefaultHistory: mockUseDefaultHistory,
     useAlignedHistory: mockUseAlignedHistory,
+    useMultipleHistories: mockUseMultipleHistories,
     useCustomCompanyQuote: mockUseCustomCompanyQuote,
     useCustomCompanyHistory: mockUseCustomCompanyHistory,
   };
 });
 
 // Import the mock functions (they are vi.fn() from the factory above)
-import { useQuotes, useDefaultQuotes, useDefaultHistory, useAlignedHistory, useCustomCompanyQuote, useCustomCompanyHistory } from '@/hooks';
+import { useQuotes, useDefaultQuotes, useDefaultHistory, useAlignedHistory, useMultipleHistories, useCustomCompanyQuote, useCustomCompanyHistory } from '@/hooks';
 
 vi.mock('@/store', async () => {
   const actual = await vi.importActual('@/store');
@@ -228,13 +242,15 @@ describe('Dashboard components', () => {
 
   describe('SevenDayView', () => {
     it('renders line charts when 7d window is active', () => {
-      useDefaultHistory.mockImplementation(() => ({
-        data: { ok: true, data: mockHistoryData },
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      }));
+      useMultipleHistories.mockImplementation((symbols: string[]) =>
+        symbols.map(() => ({
+          data: { ok: true, data: [{ date: '2024-01-01', close: 150, high: 152, low: 148, open: 149, volume: 1000000, adjustedClose: 150 }] },
+          isLoading: false,
+          isError: false,
+          error: null,
+          refetch: vi.fn(),
+        }))
+      );
 
       vi.mocked(useFinanceStore).mockImplementation((selector) => {
         const state = {
@@ -265,13 +281,15 @@ describe('Dashboard components', () => {
 
   describe('QuarterView', () => {
     it('renders area chart when quarter window is active', () => {
-      useAlignedHistory.mockImplementation(() => ({
-        data: { ok: true, data: mockAlignedData },
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      }));
+      useMultipleHistories.mockImplementation((symbols: string[]) =>
+        symbols.map(() => ({
+          data: { ok: true, data: [{ date: '2024-01-01', close: 150, high: 152, low: 148, open: 149, volume: 1000000, adjustedClose: 150 }] },
+          isLoading: false,
+          isError: false,
+          error: null,
+          refetch: vi.fn(),
+        }))
+      );
 
       vi.mocked(useFinanceStore).mockImplementation((selector) => {
         const state = {

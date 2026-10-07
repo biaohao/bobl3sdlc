@@ -87,16 +87,23 @@ app.get('/api/quote', async (req, res) => {
 app.get('/api/history', async (req, res) => {
   try {
     const symbol = (req.query.symbol as string)?.toUpperCase();
-    const period1 = req.query.period1 ? new Date(req.query.period1 as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const period2 = req.query.period2 ? new Date(req.query.period2 as string) : new Date();
+    let period1 = req.query.period1 ? new Date(req.query.period1 as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    let period2 = req.query.period2 ? new Date(req.query.period2 as string) : new Date();
 
     if (!symbol) {
       return res.status(400).json({ error: 'symbol query parameter required' });
     }
 
+    // Ensure period1 is strictly before period2 and format strings differ (e.g. for same-day queries)
+    if (period1.toISOString().split('T')[0] === period2.toISOString().split('T')[0]) {
+      period1 = new Date(period2.getTime() - 24 * 60 * 60 * 1000);
+    } else if (period1.getTime() >= period2.getTime()) {
+      period1 = new Date(period2.getTime() - 24 * 60 * 60 * 1000);
+    }
+
     const history = await yahooFinance.chart(symbol, {
-      period1,
-      period2,
+      period1: period1.toISOString().split('T')[0],
+      period2: period2.toISOString().split('T')[0],
       interval: '1d',
     });
 
