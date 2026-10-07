@@ -22,6 +22,7 @@ export function CompanySelector() {
   const [error, setError] = useState<string | null>(null);
 
   const addCustomCompany = useFinanceStore((state) => state.addCustomCompany);
+  const setCustomCompany = useFinanceStore((state) => state.setCustomCompany);
   const customSymbols = useFinanceStore((state) => state.customSymbols);
 
   const validateSymbol = (symbol: string): boolean => {
@@ -59,6 +60,8 @@ export function CompanySelector() {
       color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
       isPrimary: false,
     });
+    // Also set as custom company for the single graph view
+    setCustomCompany(upperSymbol);
     setInputValue('');
     setShowSuggestions(false);
     setError(null);
